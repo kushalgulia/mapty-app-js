@@ -11,6 +11,37 @@ const inputDuration = document.querySelector('.form__input--duration');
 const inputCadence = document.querySelector('.form__input--cadence');
 const inputElevation = document.querySelector('.form__input--elevation');
 
+class Workout {
+  id = Date.now();
+  constructor(coords, distance, duration) {
+    this.coords = coords;
+    this.distance = distance;
+    this.duration = duration;
+    this.date = new Date();
+  }
+}
+class Running extends Workout {
+  constructor(coords, distance, duration, cadence) {
+    super(distance, duration, coords);
+    this.cadence = cadence;
+    this._calcPace();
+  }
+  _calcPace() {
+    this.pace = Math.round(this.duration / this.distance);
+  }
+}
+class Cycling extends Workout {
+  constructor(coords, distance, duration, elevationGain) {
+    super(distance, duration, coords);
+    this.elevationGain = elevationGain;
+    this._calcSpeed();
+  }
+  _calcSpeed() {
+    this.speed = Math.round((distance * 60) / duration);
+    return this.speed;
+  }
+}
+
 class App {
   #map;
   #mapEvent;
@@ -60,7 +91,35 @@ class App {
 
   _newWorkout(e) {
     e.preventDefault();
+    const checkFinite = (...values) =>
+      values.every(val => Number.isFinite(val));
+    const checkPositive = (...values) => values.every(val => val >= 0);
+
+    //read and validate data
+    const type = inputType.value;
+    const distance = +inputDistance.value;
+    const duration = +inputDuration.value;
     const { lat, lng } = this.#mapEvent.latlng;
+    if (type === 'running') {
+      const cadence = +inputCadence.value;
+      if (
+        !checkFinite(distance, duration, cadence) ||
+        !checkPositive(distance, duration, cadence)
+      )
+        return alert('All the inputs should be possitive number');
+      console.log(new Running([lat, lng], distance, duration, cadence));
+    }
+    if (type === 'cycling') {
+      const elevation = +inputElevation.value;
+      if (
+        !checkFinite(distance, duration, cadence) ||
+        !checkPositive(distance, duration)
+      )
+        return alert('All the inputs should be possitive number');
+      console.log(new Cycling([lat, lng], distance, duration, elevation));
+    }
+
+    //dislay marker
     L.marker([lat, lng], { riseOnHover: true })
       .addTo(this.#map)
       .bindPopup(
@@ -74,12 +133,14 @@ class App {
       )
       .setPopupContent(`workout`)
       .openPopup();
+
+    //clear input fields and hide form
     inputDistance.value =
       inputCadence.value =
       inputDuration.value =
       inputElevation.value =
         '';
-    // map.classList.add('hidden');
+    form.classList.add('hidden');
   }
 }
 
