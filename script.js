@@ -2,7 +2,7 @@
 
 // prettier-ignore
 const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
+//selectors
 const form = document.querySelector('.form');
 const containerWorkouts = document.querySelector('.workouts');
 const inputType = document.querySelector('.form__input--type');
@@ -11,6 +11,8 @@ const inputDuration = document.querySelector('.form__input--duration');
 const inputCadence = document.querySelector('.form__input--cadence');
 const inputElevation = document.querySelector('.form__input--elevation');
 
+////////////////////////////////////////
+// data classes
 class Workout {
   id = Date.now();
   constructor(coords, distance, duration) {
@@ -21,30 +23,35 @@ class Workout {
   }
 }
 class Running extends Workout {
+  type = 'running';
   constructor(coords, distance, duration, cadence) {
-    super(distance, duration, coords);
+    super(coords, distance, duration);
     this.cadence = cadence;
     this._calcPace();
   }
   _calcPace() {
     this.pace = Math.round(this.duration / this.distance);
+    return this.pace;
   }
 }
 class Cycling extends Workout {
+  type = 'cycling';
   constructor(coords, distance, duration, elevationGain) {
-    super(distance, duration, coords);
+    super(coords, distance, duration);
     this.elevationGain = elevationGain;
     this._calcSpeed();
   }
   _calcSpeed() {
-    this.speed = Math.round((distance * 60) / duration);
+    this.speed = Math.round((this.distance * 60) / this.duration);
     return this.speed;
   }
 }
-
+/////////////////////////////////////////////////////
+// app class
 class App {
   #map;
   #mapEvent;
+  #workouts = [];
   constructor() {
     this._getPosition();
     form.addEventListener('submit', this._newWorkout.bind(this));
@@ -54,7 +61,7 @@ class App {
   _getPosition() {
     if (navigator.geolocation)
       navigator.geolocation.getCurrentPosition(
-        this._loadMap.bind(this),
+        this._loadMap.bind(this), //need to bind this keyword in callback functions
         function () {
           console.log('Unable to access your location');
         }
@@ -95,11 +102,13 @@ class App {
       values.every(val => Number.isFinite(val));
     const checkPositive = (...values) => values.every(val => val >= 0);
 
-    //read and validate data
     const type = inputType.value;
     const distance = +inputDistance.value;
     const duration = +inputDuration.value;
     const { lat, lng } = this.#mapEvent.latlng;
+    let workout;
+
+    //read and validate data
     if (type === 'running') {
       const cadence = +inputCadence.value;
       if (
@@ -107,20 +116,30 @@ class App {
         !checkPositive(distance, duration, cadence)
       )
         return alert('All the inputs should be possitive number');
-      console.log(new Running([lat, lng], distance, duration, cadence));
+      workout = new Running([lat, lng], distance, duration, cadence);
     }
     if (type === 'cycling') {
       const elevation = +inputElevation.value;
       if (
-        !checkFinite(distance, duration, cadence) ||
+        !checkFinite(distance, duration, elevation) ||
         !checkPositive(distance, duration)
       )
         return alert('All the inputs should be possitive number');
-      console.log(new Cycling([lat, lng], distance, duration, elevation));
+      workout = new Cycling([lat, lng], distance, duration, elevation);
     }
 
+    //save workout data
+    this.#workouts.push(workout);
+
+    //render workout
+    this._renderWorkout(workout);
+
     //dislay marker
-    L.marker([lat, lng], { riseOnHover: true })
+    this._displayMarker(workout);
+  }
+
+  _displayMarker(workout) {
+    L.marker(workout.coords)
       .addTo(this.#map)
       .bindPopup(
         L.popup({
@@ -128,7 +147,7 @@ class App {
           minWidth: 100,
           autoClose: false,
           closeOnClick: false,
-          className: 'running-popup',
+          className: `${workout.type}-popup`,
         })
       )
       .setPopupContent(`workout`)
@@ -141,6 +160,11 @@ class App {
       inputElevation.value =
         '';
     form.classList.add('hidden');
+  }
+  _renderWorkout(workout) {}
+
+  get workouts() {
+    return this.#workouts;
   }
 }
 
