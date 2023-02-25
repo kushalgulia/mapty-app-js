@@ -63,6 +63,7 @@ class App {
     this._getPosition();
     form.addEventListener('submit', this._newWorkout.bind(this));
     inputType.addEventListener('change', this._toogleElevationField.bind(this));
+    containerWorkouts.addEventListener('click', this._moveToMarker.bind(this));
   }
 
   _getPosition() {
@@ -89,7 +90,13 @@ class App {
 
     this.#map.on('click', this._showForm.bind(this)); //leaflet built-in event handler
   }
-
+  _moveToMarker(e) {
+    const li = e.target.closest('li.workout');
+    if (!li) return;
+    const id = li.dataset.id;
+    const workout = this.#workouts.find(w => w.id === id);
+    this.#map.panTo(workout.coords, { animate: true, duration: 0.5 });
+  }
   _showForm(mapE) {
     this.#mapEvent = mapE; //sets the value for further use in the _newWorkout method
     form.classList.remove('hidden');
